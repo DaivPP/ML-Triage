@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ML Assisted Triage System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@300;400;500&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --red:       #c91a04;
+      --red-dim:   #a01403;
+      --red-glow:  rgba(201,26,4,0.18);
+      --orange:    #d96b00;
+      --green:     #0e8a47;
+      --bg:        #f0f2f5;
+      --panel:     rgba(255,255,255,0.97);
+      --border:    rgba(201,26,4,0.2);
+      --text:      #1a1f2e;
+      --muted:     #5a6273;
+      --input-bg:  #f8f9fb;
+      --input-border: #dde1ea;
+      --sym-border: #c0c5d0;
+      --navbar-bg: rgba(255,255,255,0.85);
+      --navbar-border: rgba(201,26,4,0.15);
+      --navbar-shadow: 0 1px 12px rgba(0,0,0,0.08);
+      --overlay:   linear-gradient(160deg,rgba(240,242,245,0.92) 0%,rgba(240,242,245,0.88) 100%);
+      --panel-shadow: 0 4px 32px rgba(0,0,0,0.1), 0 1px 4px rgba(201,26,4,0.08);
+      --result-body-bg: rgba(0,0,0,0.06);
+      --result-body-color: #1a1f2e;
+      --ref-bg:    rgba(0,0,0,0.03);
+      --ref-border: rgba(0,0,0,0.07);
+      --ref-item-bg: rgba(0,0,0,0.02);
+      --footer-color: rgba(90,98,115,0.55);
+      --mono:      'Share Tech Mono', monospace;
+      --head:      'Rajdhani', sans-serif;
+      --body:      'Inter', sans-serif;
+    }
+
+    /* ── DARK MODE VARIABLES ── */
+    [data-theme="dark"] {
+      --bg:        #080a0d;
+      --panel:     rgba(12,16,22,0.88);
+      --border:    rgba(232,35,10,0.25);
+      --text:      #d9dde6;
+      --muted:     #6b7280;
+      --input-bg:  rgba(255,255,255,0.04);
+      --input-border: rgba(255,255,255,0.1);
+      --sym-border: rgba(255,255,255,0.2);
+      --navbar-bg: rgba(8,10,13,0.6);
+      --navbar-border: rgba(232,35,10,0.2);
+      --navbar-shadow: none;
+      --overlay:   linear-gradient(160deg,rgba(8,10,13,0.82) 0%,rgba(8,10,13,0.72) 100%);
+      --panel-shadow: 0 0 60px rgba(232,35,10,0.12), 0 24px 64px rgba(0,0,0,0.5);
+      --result-body-bg: rgba(0,0,0,0.25);
+      --result-body-color: #d9dde6;
+      --ref-bg:    rgba(255,255,255,0.03);
+      --ref-border: rgba(255,255,255,0.07);
+      --ref-item-bg: rgba(255,255,255,0.02);
+      --footer-color: rgba(107,114,128,0.5);
+    }
+
+    /* ── THEME TOGGLE BUTTON ── */
+    .theme-toggle {
+      width: 44px; height: 24px;
+      background: var(--input-border);
+      border: 1.5px solid var(--input-border);
+      border-radius: 99px;
+      cursor: pointer;
+      position: relative;
+      transition: background .3s, border-color .3s;
+      flex-shrink: 0;
+      outline: none;
+    }
+    .theme-toggle:focus-visible {
+      box-shadow: 0 0 0 3px rgba(201,26,4,0.3);
+    }
+    .theme-toggle .toggle-thumb {
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1), background .3s;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      line-height: 1;
+    }
+    [data-theme="dark"] .theme-toggle {
+      background: var(--red);
+      border-color: var(--red);
+    }
+    [data-theme="dark"] .theme-toggle .toggle-thumb {
+      transform: translateX(20px);
+      background: #1a1a2e;
+    }
+    .toggle-icon-sun, .toggle-icon-moon { position: absolute; font-size: 12px; top: 50%; transform: translateY(-50%); }
+    .toggle-icon-sun  { left: -22px; }
+    .toggle-icon-moon { right: -22px; }
+    .theme-toggle-wrap {
+      display: flex; align-items: center;
+      gap: 8px; position: relative;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background .35s, color .35s;
+    }
+
+    /* ── VIDEO BG ── */
+    #bg-video {
+      position: fixed; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      z-index: -2;
+      opacity: 0.28;
+    }
+    .overlay {
+      position: fixed; inset: 0;
+      background: var(--overlay);
+      z-index: -1;
+      transition: background .35s;
+    }
+
+    /* ── SUBTLE GRID PATTERN ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(201,26,4,0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(201,26,4,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 32px;
+      border-bottom: 1px solid var(--navbar-border);
+      background: var(--navbar-bg);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: var(--navbar-shadow);
+      transition: background .35s, border-color .35s;
+    }
+    .nav-left { display: flex; align-items: center; gap: 20px; }
+    .logo img { height: 44px; display: block; }
+    .logo-fallback {
+      height: 44px; width: 110px;
+      border: 1.5px dashed var(--red);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--head); font-size: 13px; color: var(--red);
+      letter-spacing: 1px;
+    }
+    .nav-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--red);
+      background: rgba(201,26,4,0.08);
+      border: 1px solid rgba(201,26,4,0.25);
+      padding: 3px 10px;
+      border-radius: 2px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      animation: blink 2.5s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .home-btn {
+      font-family: var(--head);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.5px;
+      padding: 6px 14px;
+      border: 1px solid rgba(90,98,115,0.3);
+      border-radius: 4px;
+      transition: color .2s, border-color .2s, background .2s;
+    }
+    .home-btn:hover { color: var(--red); border-color: rgba(201,26,4,0.4); background: rgba(201,26,4,0.05); }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 48px 20px 20px;
+    }
+    .hero-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--red);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-family: var(--head);
+      font-size: clamp(32px, 5vw, 56px);
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 2px;
+      line-height: 1.1;
+      text-shadow: none;
+    }
+    [data-theme="dark"] .hero h1 {
+      text-shadow: 0 0 40px rgba(232,35,10,0.5);
+    }
+    .hero h1 span { color: var(--red); }
+    .hero p {
+      max-width: 600px;
+      margin: 18px auto 0;
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin: 28px auto 0;
+      max-width: 700px;
+      padding: 0 20px;
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:.7} }
+
+    /* ── MAIN PANEL ── */
+    .main {
+      max-width: 760px;
+      margin: 36px auto 60px;
+      padding: 0 20px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(201,26,4,0.12);
+      border-radius: 16px;
+      padding: 40px;
+      backdrop-filter: blur(16px);
+      box-shadow: var(--panel-shadow);
+      position: relative;
+      overflow: hidden;
+      transition: background .35s, box-shadow .35s;
+    }
+    .panel::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--red), transparent);
+    }
+
+    /* ── SECTION HEADING ── */
+    .section-title {
+      font-family: var(--head);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--red);
+      margin: 28px 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(201,26,4,0.2), transparent);
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* ── FIELD GROUP ── */
+    .field-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .field-group.single { grid-template-columns: 1fr; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label.field-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .input-wrap {
+      position: relative;
+    }
+    .input-wrap .unit {
+      position: absolute;
+      right: 12px; top: 50%;
+      transform: translateY(-50%);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 11px 40px 11px 14px;
+      background: var(--input-bg);
+      border: 1.5px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+      appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus {
+      border-color: var(--red);
+      background: var(--panel);
+      box-shadow: 0 0 0 3px rgba(201,26,4,0.1);
+    }
+    input[type="number"].invalid {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(217,107,0,0.1);
+    }
+    .field-hint {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--mono);
+      opacity: 0.8;
+    }
+
+    /* ── SYMPTOM CHECKBOXES ── */
+    .symptom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .symptom-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      background: var(--input-bg);
+      border: 1.5px solid var(--input-border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+      user-select: none;
+    }
+    .symptom-item:hover {
+      background: rgba(201,26,4,0.05);
+      border-color: rgba(201,26,4,0.35);
+    }
+    .symptom-item input[type="checkbox"] { display: none; }
+    .sym-check {
+      width: 18px; height: 18px;
+      border: 1.5px solid var(--sym-border);
+      border-radius: 4px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .2s;
+      font-size: 11px;
+    }
+    .symptom-item input:checked ~ .sym-check {
+      background: var(--red);
+      border-color: var(--red);
+    }
+    .symptom-item input:checked ~ .sym-check::after { content: '✓'; color: white; }
+    .sym-label {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text);
+    }
+    .symptom-item input:checked ~ .sym-label { color: var(--red); font-weight: 600; }
+
+    /* ── SUBMIT BUTTON ── */
+    .btn-analyze {
+      width: 100%;
+      padding: 15px;
+      margin-top: 28px;
+      background: linear-gradient(135deg, var(--red), #c41a04);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-family: var(--head);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 24px rgba(232,35,10,0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-analyze::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    }
+    .btn-analyze:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(232,35,10,0.55);
+    }
+    .btn-analyze:active { transform: translateY(0); }
+    .btn-analyze:disabled {
+      opacity: 0.5; cursor: not-allowed; transform: none;
+    }
+    .btn-text { position: relative; z-index: 1; }
+
+    /* ── LOADING ── */
+    .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      position: relative; z-index: 1;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESULT ── */
+    .result {
+      display: none;
+      margin-top: 28px;
+      border-radius: 12px;
+      overflow: hidden;
+      animation: fadeUp .4s ease;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+    .result-header {
+      padding: 22px 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .result-icon {
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+    .result-label {
+      font-family: var(--head);
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .result-sub {
+      font-family: var(--mono);
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+    .result-conf {
+      margin-left: auto;
+      text-align: right;
+    }
+    .conf-num {
+      font-family: var(--mono);
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .conf-label {
+      font-size: 11px;
+      letter-spacing: 1px;
+      opacity: 0.7;
+    }
+
+    .result-body {
+      padding: 18px 28px 22px;
+      background: var(--result-body-bg);
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--result-body-color);
+      transition: background .35s, color .35s;
+    }
+    .result-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 6px;
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background .2s;
+    }
+    .result-action:hover { background: rgba(255,255,255,0.25); }
+
+    /* triage color themes */
+    .res-critical .result-header { background: linear-gradient(135deg, #c41515, #8b0e0e); }
+    .res-critical .result-label,
+    .res-critical .conf-num { color: #ff8080; }
+    .res-urgent .result-header { background: linear-gradient(135deg, #b85c00, #7a3d00); }
+    .res-urgent .result-label,
+    .res-urgent .conf-num { color: #ffc36b; }
+    .res-nonurgent .result-header { background: linear-gradient(135deg, #0e7240, #074d2a); }
+    .res-nonurgent .result-label,
+    .res-nonurgent .conf-num { color: #6ee7a0; }
+
+    /* ── REFERENCE PANEL ── */
+    .ref-panel {
+      margin-top: 28px;
+      padding: 22px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      transition: background .35s, border-color .35s;
+    }
+    .ref-title {
+      font-family: var(--head);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .ref-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .ref-item {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+      padding: 8px 12px;
+      background: var(--ref-item-bg);
+      border-radius: 6px;
+      border-left: 2px solid var(--red);
+      line-height: 1.5;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .ref-item strong { color: var(--text); display: block; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 11px;
+      color: rgba(90,98,115,0.6);
+      font-family: var(--mono);
+      letter-spacing: 1px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 560px) {
+      .panel { padding: 24px 18px; }
+      .field-group, .symptom-grid, .ref-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 30px; }
+      .status-bar { gap: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- VIDEO BACKGROUND -->
+  <video autoplay muted loop id="bg-video" playsinline>
+    <source src="{{ url_for('static', filename='drone.mp4.mp4') }}" type="video/mp4">
+  </video>
+  <div class="overlay"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='logo197.png') }}" alt="Logo"
+             onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'>MEDTRIAGE</div>'">
+      </div>
+      <span class="nav-badge">● SYSTEM ONLINE</span>
+    </div>
+    <div class="nav-right" style="display:flex;align-items:center;gap:16px;">
+      <div class="theme-toggle-wrap">
+        <span class="toggle-icon-sun">☀️</span>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
+          <span class="toggle-thumb"></span>
+        </button>
+        <span class="toggle-icon-moon">🌙</span>
+      </div>
+      <a href="" class="home-btn">← Back to Home</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-label">AI-Powered Emergency Response</div>
+    <h1>ML <span>Assisted</span> Triage System</h1>
+    <p>Real-time patient prioritization using machine learning. Analyzes vital signs and symptoms to determine urgency and recommend appropriate medical response.</p>
+
+    <div class="status-bar">
+      <div class="status-item"><span class="status-dot"></span>MODEL ACTIVE</div>
+      <div class="status-item"><span class="status-dot"></span>REAL-TIME ANALYSIS</div>
+      <div class="status-item"><span class="status-dot"></span>SECURE CHANNEL</div>
+    </div>
+  </section>
+
+  <!-- MAIN PANEL -->
+  <main class="main">
+    <div class="panel">
+
+      <form id="triageForm" novalidate>
+
+        <!-- PATIENT INFO -->
+        <div class="section-title">Patient Information</div>
+        <div class="field-group single">
+          <div class="field">
+            <label class="field-label" for="age">Age</label>
+            <div class="input-wrap">
+              <input type="number" id="age" placeholder="e.g. 35" min="0" max="120">
+              <span class="unit">yrs</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- VITAL SIGNS -->
+        <div class="section-title">Vital Signs</div>
+        <div class="field-group">
+          <div class="field">
+            <label class="field-label" for="heart_rate">Heart Rate</label>
+            <div class="input-wrap">
+              <input type="number" id="heart_rate" placeholder="e.g. 72" min="20" max="300">
+              <span class="unit">bpm</span>
+            </div>
+            <span class="field-hint">Normal: 60–100 bpm</span>
+          </div>
+          <div class="field">
+            <label class="field-label" for="spo2">SpO₂</label>
+            <div class="input-wrap">
+              <input type="number" id="spo2" placeholder="e.g. 98" min="50" max="100">
+              <span class="unit">%</span>
+            </div>
+            <span class="field-hint">Normal: 95–100%</span>
+          </div>
+          <div class="field">
+            <label class="field-label" for="systolic_bp">Systolic BP</label>
+            <div class="input-wrap">
+              <input type="number" id="systolic_bp" placeholder="e.g. 120" min="50" max="300">
+              <span class="unit">mmHg</span>
+            </div>
+            <span class="field-hint">Normal: 90–120 mmHg</span>
+          </div>
+          <div class="field">
+            <label class="field-label" for="respiratory_rate">Respiratory Rate</label>
+            <div class="input-wrap">
+              <input type="number" id="respiratory_rate" placeholder="e.g. 16" min="5" max="60">
+              <span class="unit">br/min</span>
+            </div>
+            <span class="field-hint">Normal: 12–20 br/min</span>
+          </div>
+          <div class="field">
+            <label class="field-label" for="temperature">Temperature</label>
+            <div class="input-wrap">
+              <input type="number" step="0.1" id="temperature" placeholder="e.g. 37.0" min="30" max="45">
+              <span class="unit">°C</span>
+            </div>
+            <span class="field-hint">Normal: 36–37°C</span>
+          </div>
+        </div>
+
+        <!-- SYMPTOMS -->
+        <div class="section-title">Symptoms &amp; Conditions</div>
+        <div class="symptom-grid">
+          <label class="symptom-item">
+            <input type="checkbox" id="chest_pain">
+            <span class="sym-check"></span>
+            <span class="sym-label">Chest Pain</span>
+          </label>
+          <label class="symptom-item">
+            <input type="checkbox" id="shortness_of_breath">
+            <span class="sym-check"></span>
+            <span class="sym-label">Shortness of Breath</span>
+          </label>
+          <label class="symptom-item">
+            <input type="checkbox" id="severe_bleeding">
+            <span class="sym-check"></span>
+            <span class="sym-label">Severe Bleeding</span>
+          </label>
+          <label class="symptom-item">
+            <input type="checkbox" id="loss_of_consciousness">
+            <span class="sym-check"></span>
+            <span class="sym-label">Loss of Consciousness</span>
+          </label>
+          <label class="symptom-item">
+            <input type="checkbox" id="diabetes">
+            <span class="sym-check"></span>
+            <span class="sym-label">Diabetes</span>
+          </label>
+          <label class="symptom-item">
+            <input type="checkbox" id="heart_disease">
+            <span class="sym-check"></span>
+            <span class="sym-label">Heart Disease</span>
+          </label>
+        </div>
+
+        <!-- SUBMIT -->
+        <button type="submit" class="btn-analyze" id="submitBtn">
+          <span class="btn-text">Analyze Patient Condition</span>
+          <div class="spinner" id="spinner"></div>
+        </button>
+
+      </form>
+
+      <!-- RESULT -->
+      <div id="result" class="result"></div>
+
+      <!-- REFERENCE -->
+      <div class="ref-panel">
+        <div class="ref-title">Normal Reference Ranges</div>
+        <div class="ref-grid">
+          <div class="ref-item"><strong>Heart Rate</strong>60 – 100 bpm</div>
+          <div class="ref-item"><strong>SpO₂</strong>95 – 100%</div>
+          <div class="ref-item"><strong>Temperature</strong>36.0 – 37.0 °C</div>
+          <div class="ref-item"><strong>Systolic BP</strong>90 – 120 mmHg</div>
+          <div class="ref-item"><strong>Respiratory Rate</strong>12 – 20 br/min</div>
+          <div class="ref-item"><strong>Age Accepted</strong>0 – 120 years</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>ML TRIAGE SYSTEM &nbsp;·&nbsp; FOR CLINICAL ASSISTANCE ONLY &nbsp;·&nbsp; NOT A SUBSTITUTE FOR PROFESSIONAL MEDICAL ADVICE</footer>
+
+  <script>
+    /* ── THEME TOGGLE ── */
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('themeToggle');
+
+    // Load saved preference (default: light)
+    const savedTheme = localStorage.getItem('triageTheme') || 'light';
+    root.setAttribute('data-theme', savedTheme);
+
+    toggleBtn.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('triageTheme', next);
+    });
+
+    /* ── FORM VALIDATION ── */
+    const fields = {
+      age:               { min: 0,   max: 120, label: 'Age' },
+      heart_rate:        { min: 20,  max: 300, label: 'Heart Rate' },
+      spo2:              { min: 50,  max: 100, label: 'SpO₂' },
+      systolic_bp:       { min: 50,  max: 300, label: 'Systolic BP' },
+      respiratory_rate:  { min: 5,   max: 60,  label: 'Respiratory Rate' },
+      temperature:       { min: 30,  max: 45,  label: 'Temperature' },
+    };
+
+    function validate() {
+      let valid = true;
+      for (const [id, cfg] of Object.entries(fields)) {
+        const el = document.getElementById(id);
+        const val = parseFloat(el.value);
+        if (el.value === '' || isNaN(val) || val < cfg.min || val > cfg.max) {
+          el.classList.add('invalid');
+          valid = false;
+        } else {
+          el.classList.remove('invalid');
+        }
+      }
+      return valid;
+    }
+
+    Object.keys(fields).forEach(id => {
+      document.getElementById(id).addEventListener('input', function() {
+        const cfg = fields[id];
+        const val = parseFloat(this.value);
+        if (this.value === '' || isNaN(val) || val < cfg.min || val > cfg.max)
+          this.classList.add('invalid');
+        else
+          this.classList.remove('invalid');
+      });
+    });
+
+    /* ── TRIAGE CONFIGS ── */
+    const triageConfig = {
+      critical: {
+        cls: 'res-critical',
+        icon: '🚨',
+        label: 'Critical',
+        sub: 'Immediate intervention required',
+        msg: 'This patient requires <strong>immediate emergency response</strong>. Emergency drone dispatch and on-site medical intervention are strongly recommended. Do not delay.',
+        action: true,
+        actionLabel: '📹 Launch Video Consultation',
+      },
+      urgent: {
+        cls: 'res-urgent',
+        icon: '⚠️',
+        label: 'Urgent',
+        sub: 'Prompt medical attention needed',
+        msg: 'This patient requires <strong>prompt medical attention</strong>. A teleconsultation with a doctor is recommended within the next 30 minutes.',
+        action: true,
+        actionLabel: '📹 Begin Teleconsultation',
+      },
+      nonurgent: {
+        cls: 'res-nonurgent',
+        icon: '✅',
+        label: 'Non-Urgent',
+        sub: 'Stable — monitor and follow up',
+        msg: 'The patient\'s condition appears <strong>stable</strong>. Continue monitoring vital signs and schedule a follow-up consultation at the earliest convenience.',
+        action: false,
+      }
+    };
+
+    /* ── SUBMIT ── */
+    document.getElementById('triageForm').onsubmit = async function(e) {
+      e.preventDefault();
+
+      if (!validate()) {
+        // Scroll to first invalid input
+        const first = document.querySelector('input.invalid');
+        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      const btn = document.getElementById('submitBtn');
+      const spinner = document.getElementById('spinner');
+      btn.disabled = true;
+      btn.querySelector('.btn-text').style.display = 'none';
+      spinner.style.display = 'block';
+
+      const data = {
+        age:                    Number(document.getElementById('age').value),
+        heart_rate:             Number(document.getElementById('heart_rate').value),
+        spo2:                   Number(document.getElementById('spo2').value),
+        systolic_bp:            Number(document.getElementById('systolic_bp').value),
+        respiratory_rate:       Number(document.getElementById('respiratory_rate').value),
+        temperature:            Number(document.getElementById('temperature').value),
+        chest_pain:             document.getElementById('chest_pain').checked ? 1 : 0,
+        shortness_of_breath:    document.getElementById('shortness_of_breath').checked ? 1 : 0,
+        severe_bleeding:        document.getElementById('severe_bleeding').checked ? 1 : 0,
+        loss_of_consciousness:  document.getElementById('loss_of_consciousness').checked ? 1 : 0,
+        diabetes:               document.getElementById('diabetes').checked ? 1 : 0,
+        heart_disease:          document.getElementById('heart_disease').checked ? 1 : 0,
+      };
+
+      try {
+        const res = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        renderResult(result);
+      } catch (err) {
+        renderError();
+      } finally {
+        btn.disabled = false;
+        btn.querySelector('.btn-text').style.display = '';
+        spinner.style.display = 'none';
+      }
+    };
+
+    function renderResult(result) {
+      const key = (result.triage || '').toLowerCase().replace('-', '').replace(' ', '');
+      const cfg = triageConfig[key] || triageConfig['nonurgent'];
+      const box = document.getElementById('result');
+
+      box.className = 'result ' + cfg.cls;
+      box.style.display = 'block';
+      box.innerHTML = `
+        <div class="result-header">
+          <div class="result-icon">${cfg.icon}</div>
+          <div>
+            <div class="result-label">${cfg.label}</div>
+            <div class="result-sub">${cfg.sub}</div>
+          </div>
+          <div class="result-conf">
+            <div class="conf-num">${result.confidence}%</div>
+            <div class="conf-label">CONFIDENCE</div>
+          </div>
+        </div>
+        <div class="result-body">
+          ${cfg.msg}
+          ${cfg.action ? `<br><a href="" class="result-action">${cfg.actionLabel}</a>` : ''}
+        </div>
+      `;
+
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function renderError() {
+      const box = document.getElementById('result');
+      box.className = 'result res-urgent';
+      box.style.display = 'block';
+      box.innerHTML = `
+        <div class="result-header">
+          <div class="result-icon">⚡</div>
+          <div><div class="result-label">Connection Error</div>
+          <div class="result-sub">Could not reach prediction server</div></div>
+        </div>
+        <div class="result-body">Unable to connect to the ML server. Please check your connection and try again.</div>
+      `;
+    }
+  </script>
+
+</body>
+</html>
