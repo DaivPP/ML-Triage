@@ -1065,6 +1065,8 @@
     }
 
     /* ── TRIAGE CONFIGS ── */
+    const CONSULT_URL = 'https://med-air-repo-of-video-hh1h.vercel.app/';
+
     const triageConfig = {
       critical: {
         cls: 'res-critical',
@@ -1169,7 +1171,7 @@
         </div>
         <div class="result-body">
           ${cfg.msg}
-          ${cfg.action ? `<br><a href="" class="result-action">${cfg.actionLabel}</a>` : ''}
+          ${cfg.action ? `<br><a href="${CONSULT_URL}" target="_blank" rel="noopener noreferrer" class="result-action">${cfg.actionLabel}</a>` : ''}
         </div>
       `;
 
