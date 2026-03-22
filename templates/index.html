@@ -408,6 +408,97 @@
     }
     .symptom-item input:checked ~ .sym-label { color: var(--red); font-weight: 600; }
 
+    /* ── VITAL MODE TOGGLE ── */
+    .vital-mode-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .vital-mode-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .mode-pills {
+      display: flex;
+      gap: 6px;
+    }
+    .mode-pill {
+      padding: 6px 14px;
+      border-radius: 99px;
+      border: 1.5px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--muted);
+      font-family: var(--body);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .mode-pill:hover {
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .mode-pill.active {
+      background: var(--red);
+      border-color: var(--red);
+      color: white;
+    }
+
+    /* ── SELECT DROPDOWN ── */
+    .select-wrap {
+      position: relative;
+    }
+    .vital-select {
+      width: 100%;
+      padding: 11px 36px 11px 14px;
+      background: var(--input-bg);
+      border: 1.5px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--body);
+      font-size: 13px;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .vital-select:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(201,26,4,0.1);
+    }
+    .vital-select.invalid {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(217,107,0,0.1);
+    }
+    .vital-select option {
+      background: #1a1a2e;
+      color: white;
+      padding: 6px;
+    }
+    .select-arrow {
+      position: absolute;
+      right: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 12px;
+      pointer-events: none;
+    }
+    .select-desc {
+      min-height: 14px;
+      transition: color .2s;
+    }
+
+    /* ── VITAL MODE TRANSITION ── */
+    #observedMode, #preciseMode {
+      transition: opacity .25s;
+    }
+
     /* ── SUBMIT BUTTON ── */
     .btn-analyze {
       width: 100%;
@@ -620,9 +711,6 @@
           <span class="toggle-thumb"></span>
         </button>
         <span class="toggle-icon-moon">🌙</span>
-      </div>
-      <a href="" class="home-btn">← Back to Home</a>
-    </div>
   </nav>
 
   <!-- HERO -->
@@ -658,7 +746,101 @@
 
         <!-- VITAL SIGNS -->
         <div class="section-title">Vital Signs</div>
-        <div class="field-group">
+        <div class="vital-mode-toggle">
+          <span class="vital-mode-label">Input mode:</span>
+          <div class="mode-pills">
+            <button type="button" class="mode-pill active" id="modeObserved">👁 Observed / Feel</button>
+            <button type="button" class="mode-pill" id="modePrecise">🔢 Precise Readings</button>
+          </div>
+        </div>
+
+        <!-- OBSERVED MODE -->
+        <div id="observedMode" class="field-group">
+
+          <div class="field">
+            <label class="field-label">Heart Rate</label>
+            <div class="select-wrap">
+              <select id="heart_rate_sel" class="vital-select">
+                <option value="" disabled selected>— Select —</option>
+                <option value="38"  data-desc="Dangerously slow, faint pulse">🔴 Dangerously Slow (&lt;40 bpm)</option>
+                <option value="52"  data-desc="Slow, weak pulse">🟠 Slow / Weak (40–59 bpm)</option>
+                <option value="80"  data-desc="Normal, steady pulse">🟢 Normal (60–100 bpm)</option>
+                <option value="115" data-desc="Fast, racing pulse">🟠 Fast / Racing (101–130 bpm)</option>
+                <option value="150" data-desc="Very fast, pounding">🔴 Very Fast / Pounding (&gt;130 bpm)</option>
+              </select>
+              <span class="select-arrow">▾</span>
+            </div>
+            <span class="field-hint select-desc" id="hr_desc"></span>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Oxygen Level (SpO₂)</label>
+            <div class="select-wrap">
+              <select id="spo2_sel" class="vital-select">
+                <option value="" disabled selected>— Select —</option>
+                <option value="72"  data-desc="Severe, lips/fingertips turning blue">🔴 Severe — Bluish skin (&lt;80%)</option>
+                <option value="87"  data-desc="Struggling to breathe, feels air-deprived">🟠 Low — Breathing struggle (80–90%)</option>
+                <option value="93"  data-desc="Mildly short of breath">🟡 Mild — Slightly breathless (91–94%)</option>
+                <option value="98"  data-desc="Breathing normally, no difficulty">🟢 Normal — No difficulty (95–100%)</option>
+              </select>
+              <span class="select-arrow">▾</span>
+            </div>
+            <span class="field-hint select-desc" id="spo2_desc"></span>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Blood Pressure</label>
+            <div class="select-wrap">
+              <select id="systolic_bp_sel" class="vital-select">
+                <option value="" disabled selected>— Select —</option>
+                <option value="60"  data-desc="Extremely low, risk of shock">🔴 Dangerously Low — Shock risk (&lt;70)</option>
+                <option value="82"  data-desc="Low, dizzy, lightheaded">🟠 Low — Dizzy / Faint (70–89)</option>
+                <option value="110" data-desc="Normal, no symptoms">🟢 Normal (90–120)</option>
+                <option value="140" data-desc="Elevated, mild headache">🟡 High — Mild headache (121–159)</option>
+                <option value="180" data-desc="Very high, severe headache or nosebleed">🔴 Very High — Severe symptoms (≥160)</option>
+              </select>
+              <span class="select-arrow">▾</span>
+            </div>
+            <span class="field-hint select-desc" id="bp_desc"></span>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Breathing Rate</label>
+            <div class="select-wrap">
+              <select id="respiratory_rate_sel" class="vital-select">
+                <option value="" disabled selected>— Select —</option>
+                <option value="6"  data-desc="Very slow, barely breathing">🔴 Very Slow — Barely breathing (&lt;8)</option>
+                <option value="10" data-desc="Slow, shallow breaths">🟠 Slow / Shallow (8–11)</option>
+                <option value="16" data-desc="Normal, comfortable breathing">🟢 Normal (12–20)</option>
+                <option value="24" data-desc="Fast, noticeable rapid breathing">🟠 Fast — Noticeably rapid (21–29)</option>
+                <option value="35" data-desc="Gasping, very labored breathing">🔴 Gasping / Labored (≥30)</option>
+              </select>
+              <span class="select-arrow">▾</span>
+            </div>
+            <span class="field-hint select-desc" id="rr_desc"></span>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Body Temperature</label>
+            <div class="select-wrap">
+              <select id="temperature_sel" class="vital-select">
+                <option value="" disabled selected>— Select —</option>
+                <option value="32"  data-desc="Extremely cold, shivering uncontrollably or stopped">🔴 Dangerously Cold — Hypothermia (&lt;34°C)</option>
+                <option value="35"  data-desc="Cold to touch, shivering">🟠 Cold — Shivering (34–35.9°C)</option>
+                <option value="36.6" data-desc="Normal body temperature">🟢 Normal — Warm (36–37°C)</option>
+                <option value="38.3" data-desc="Warm, mild fever">🟡 Warm — Mild Fever (37.1–39°C)</option>
+                <option value="40"  data-desc="Very hot, high fever">🟠 Hot — High Fever (39.1–40°C)</option>
+                <option value="41.5" data-desc="Burning hot, dangerous fever">🔴 Burning — Dangerous Fever (&gt;40°C)</option>
+              </select>
+              <span class="select-arrow">▾</span>
+            </div>
+            <span class="field-hint select-desc" id="temp_desc"></span>
+          </div>
+
+        </div>
+
+        <!-- PRECISE MODE (hidden by default) -->
+        <div id="preciseMode" class="field-group" style="display:none;">
           <div class="field">
             <label class="field-label" for="heart_rate">Heart Rate</label>
             <div class="input-wrap">
@@ -781,34 +963,59 @@
       localStorage.setItem('triageTheme', next);
     });
 
+    /* ── VITAL MODE SWITCHING ── */
+    let preciseMode = false;
+
+    document.getElementById('modeObserved').addEventListener('click', () => {
+      preciseMode = false;
+      document.getElementById('observedMode').style.display = '';
+      document.getElementById('preciseMode').style.display = 'none';
+      document.getElementById('modeObserved').classList.add('active');
+      document.getElementById('modePrecise').classList.remove('active');
+    });
+
+    document.getElementById('modePrecise').addEventListener('click', () => {
+      preciseMode = true;
+      document.getElementById('observedMode').style.display = 'none';
+      document.getElementById('preciseMode').style.display = '';
+      document.getElementById('modePrecise').classList.add('active');
+      document.getElementById('modeObserved').classList.remove('active');
+    });
+
+    /* ── SELECT DESCRIPTION HINTS ── */
+    const selectDescMap = {
+      heart_rate_sel:      'hr_desc',
+      spo2_sel:            'spo2_desc',
+      systolic_bp_sel:     'bp_desc',
+      respiratory_rate_sel:'rr_desc',
+      temperature_sel:     'temp_desc',
+    };
+    Object.keys(selectDescMap).forEach(selId => {
+      const sel = document.getElementById(selId);
+      const desc = document.getElementById(selectDescMap[selId]);
+      sel.addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        desc.textContent = opt.dataset.desc || '';
+        sel.classList.remove('invalid');
+      });
+    });
+
     /* ── FORM VALIDATION ── */
-    const fields = {
-      age:               { min: 0,   max: 120, label: 'Age' },
-      heart_rate:        { min: 20,  max: 300, label: 'Heart Rate' },
-      spo2:              { min: 50,  max: 100, label: 'SpO₂' },
-      systolic_bp:       { min: 50,  max: 300, label: 'Systolic BP' },
-      respiratory_rate:  { min: 5,   max: 60,  label: 'Respiratory Rate' },
-      temperature:       { min: 30,  max: 45,  label: 'Temperature' },
+    const preciseFields = {
+      age:               { min: 0,   max: 120 },
+      heart_rate:        { min: 20,  max: 300 },
+      spo2:              { min: 50,  max: 100 },
+      systolic_bp:       { min: 50,  max: 300 },
+      respiratory_rate:  { min: 5,   max: 60  },
+      temperature:       { min: 30,  max: 45  },
     };
 
-    function validate() {
-      let valid = true;
-      for (const [id, cfg] of Object.entries(fields)) {
-        const el = document.getElementById(id);
-        const val = parseFloat(el.value);
-        if (el.value === '' || isNaN(val) || val < cfg.min || val > cfg.max) {
-          el.classList.add('invalid');
-          valid = false;
-        } else {
-          el.classList.remove('invalid');
-        }
-      }
-      return valid;
-    }
-
-    Object.keys(fields).forEach(id => {
-      document.getElementById(id).addEventListener('input', function() {
-        const cfg = fields[id];
+    // live validation for precise inputs
+    ['heart_rate','spo2','systolic_bp','respiratory_rate','temperature'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', function() {
+        const cfg = preciseFields[id];
         const val = parseFloat(this.value);
         if (this.value === '' || isNaN(val) || val < cfg.min || val > cfg.max)
           this.classList.add('invalid');
@@ -816,6 +1023,46 @@
           this.classList.remove('invalid');
       });
     });
+
+    // age always precise
+    document.getElementById('age').addEventListener('input', function() {
+      const val = parseFloat(this.value);
+      if (this.value === '' || isNaN(val) || val < 0 || val > 120)
+        this.classList.add('invalid');
+      else
+        this.classList.remove('invalid');
+    });
+
+    function validate() {
+      let valid = true;
+
+      // Age always required
+      const ageEl = document.getElementById('age');
+      const ageVal = parseFloat(ageEl.value);
+      if (ageEl.value === '' || isNaN(ageVal) || ageVal < 0 || ageVal > 120) {
+        ageEl.classList.add('invalid'); valid = false;
+      } else { ageEl.classList.remove('invalid'); }
+
+      if (!preciseMode) {
+        // Observed mode — all selects must have a value
+        Object.keys(selectDescMap).forEach(selId => {
+          const sel = document.getElementById(selId);
+          if (!sel.value) { sel.classList.add('invalid'); valid = false; }
+          else sel.classList.remove('invalid');
+        });
+      } else {
+        // Precise mode — validate number inputs
+        ['heart_rate','spo2','systolic_bp','respiratory_rate','temperature'].forEach(id => {
+          const el = document.getElementById(id);
+          const cfg = preciseFields[id];
+          const val = parseFloat(el.value);
+          if (el.value === '' || isNaN(val) || val < cfg.min || val > cfg.max) {
+            el.classList.add('invalid'); valid = false;
+          } else { el.classList.remove('invalid'); }
+        });
+      }
+      return valid;
+    }
 
     /* ── TRIAGE CONFIGS ── */
     const triageConfig = {
@@ -853,7 +1100,7 @@
 
       if (!validate()) {
         // Scroll to first invalid input
-        const first = document.querySelector('input.invalid');
+        const first = document.querySelector('input.invalid, select.invalid');
         if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
@@ -864,13 +1111,18 @@
       btn.querySelector('.btn-text').style.display = 'none';
       spinner.style.display = 'block';
 
+      // Collect vitals from the active mode
+      const getVital = (selectId, inputId) => preciseMode
+        ? Number(document.getElementById(inputId).value)
+        : Number(document.getElementById(selectId).value);
+
       const data = {
         age:                    Number(document.getElementById('age').value),
-        heart_rate:             Number(document.getElementById('heart_rate').value),
-        spo2:                   Number(document.getElementById('spo2').value),
-        systolic_bp:            Number(document.getElementById('systolic_bp').value),
-        respiratory_rate:       Number(document.getElementById('respiratory_rate').value),
-        temperature:            Number(document.getElementById('temperature').value),
+        heart_rate:             getVital('heart_rate_sel',       'heart_rate'),
+        spo2:                   getVital('spo2_sel',             'spo2'),
+        systolic_bp:            getVital('systolic_bp_sel',      'systolic_bp'),
+        respiratory_rate:       getVital('respiratory_rate_sel', 'respiratory_rate'),
+        temperature:            getVital('temperature_sel',      'temperature'),
         chest_pain:             document.getElementById('chest_pain').checked ? 1 : 0,
         shortness_of_breath:    document.getElementById('shortness_of_breath').checked ? 1 : 0,
         severe_bleeding:        document.getElementById('severe_bleeding').checked ? 1 : 0,
